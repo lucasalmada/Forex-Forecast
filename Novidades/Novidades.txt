@@ -1,0 +1,5 @@
+Utilizar wandb.ai para testar hyperparâmetros
+neptune.ai
+clear.ml
+
+
