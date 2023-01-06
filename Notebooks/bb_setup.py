@@ -52,8 +52,8 @@ def setup_1_old(df,var_bb = 2,time_period = 20,pontos = 20,rate_stop = 1,rate_tp
 
     percent_fechamento = 0.9
 
-    df['acao'] = df.apply(lambda x: 'call' if (x['pos_BB_inicial'] == -1 and x['verifica_tamanho'] >= percent_fechamento) else
-                                    'sell' if (x['pos_BB_inicial'] == 1 and x['verifica_tamanho'] >= percent_fechamento) else 0 , axis = 1) 
+    df['acao'] = df.apply(lambda x: 'call' if (x['pos_BB_inicial'] == -1 and x['verifica_tamanho']) else
+                                    'sell' if (x['pos_BB_inicial'] == 1 and x['verifica_tamanho']) else 0 , axis = 1) 
 
 
     lista = df['acao'].values
@@ -274,7 +274,7 @@ def setup_2(df,df_ticks,var_bb = 2,time_period = 20,pontos = 20,rate_stop = 1,ra
         tp = row['tp']
         acao = row['acao']
 
-        data = str(datetime.strptime(data, '%Y-%m-%d %H:%M:%S') + timedelta(minutes = 5))
+        data = str(datetime.strptime(data, '%Y-%m-%d %H:%M:%S') + timedelta(minutes = timeframe))
 
         candles_10 = timeframe * 10 * 60
 
@@ -286,7 +286,7 @@ def setup_2(df,df_ticks,var_bb = 2,time_period = 20,pontos = 20,rate_stop = 1,ra
                 if valor_atual < stop:
                     df_acao.loc[index,'resultado_binario'] = 0
                     break
-                elif tp > valor_atual:
+                elif valor_atual > tp:
                     df_acao.loc[index,'resultado_binario'] = 1
                     break
                 else:
@@ -301,7 +301,7 @@ def setup_2(df,df_ticks,var_bb = 2,time_period = 20,pontos = 20,rate_stop = 1,ra
                     #lista_result.append(0)
                     df_acao.loc[index,'resultado_binario'] = 0
                     break
-                elif tp > valor_atual:
+                elif valor_atual < tp:
                     df_acao.loc[index,'resultado_binario'] = 1
                     break
                 else:
@@ -378,7 +378,7 @@ def setup_1(df,df_ticks,var_bb = 2,time_period = 20,pontos = 20,rate_stop = 1,ra
         tp = row['tp']
         acao = row['acao']
 
-        data = str(datetime.strptime(data, '%Y-%m-%d %H:%M:%S') + timedelta(minutes = 5))
+        data = str(datetime.strptime(data, '%Y-%m-%d %H:%M:%S') + timedelta(minutes = timeframe))
 
         candles_10 = timeframe * 10 * 60
 
@@ -390,7 +390,7 @@ def setup_1(df,df_ticks,var_bb = 2,time_period = 20,pontos = 20,rate_stop = 1,ra
                 if valor_atual < stop:
                     df_acao.loc[index,'resultado_binario'] = 0
                     break
-                elif tp > valor_atual:
+                elif valor_atual > tp:
                     df_acao.loc[index,'resultado_binario'] = 1
                     break
                 else:
@@ -405,7 +405,7 @@ def setup_1(df,df_ticks,var_bb = 2,time_period = 20,pontos = 20,rate_stop = 1,ra
                     #lista_result.append(0)
                     df_acao.loc[index,'resultado_binario'] = 0
                     break
-                elif tp > valor_atual:
+                elif valor_atual < tp:
                     df_acao.loc[index,'resultado_binario'] = 1
                     break
                 else:
