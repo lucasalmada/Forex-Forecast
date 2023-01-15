@@ -29,6 +29,37 @@ def main_indicators(df):
 
     return df
 
+def main_features(df):
+
+    df['MA_5'] = ta.SMA(df['Close'],timeperiod=5)
+    df['MA_21'] = ta.SMA(df['Close'],timeperiod=21)
+    df['BB_up'],df['BB_mid'],df['BB_low'] = ta.BBANDS(df['Close'], timeperiod=20, nbdevup=2, nbdevdn=2, matype=0)
+    df['macd'], df['macdsignal'], df['macdhist'] = ta.MACD(df['Close'], fastperiod=12, slowperiod=26, signalperiod=9)
+    df['RSI'] = ta.RSI(df['Close'],14)
+    df['dist_bb'] = df['BB_up'] - df['BB_low']
+    df['dist_bb_up'] = df['BB_up'] - df['Close']
+    df['dist_bb_low'] = df['BB_low'] - df['Close']
+    df['dist_media'] = df['MA_5'] - df['MA_21']
+    df['dist_media_abs'] = abs(df['MA_5'] - df['MA_21'])
+    df['dist_price_media_21'] = df['MA_21'] - df['Close']
+    df['dist_price_media_5'] = df['MA_5'] - df['Close']
+    df['dist_RSI_70'] = df['RSI'] - 70
+    df['dist_RSI_30'] = df['RSI'] - 30
+    df['tamanho_corpo'] = abs(df['Open'] - df['Close'])
+    df['tamanho_full'] = abs(df['High'] - df['Low'])
+    df['media_vol_5'] = df['Vol'].rolling(5).mean()
+    df['media_vol_3'] = df['Vol'].rolling(3).mean()
+    df['media_vol_10'] = df['Vol'].rolling(10).mean()
+    df['tamanho_corpo_5'] = df['tamanho_corpo'].rolling(5).mean()
+
+    df['tamanho_corpo_direcao'] = df['Close'] - df['Open']
+    df['candle_direcao'] = df['tamanho_corpo_direcao'].apply(lambda x: 1 if x > 0 else 0)
+    df['candle_direcao_5'] = df['candle_direcao'].rolling(5).mean()
+    df['candle_direcao_3'] = df['candle_direcao'].rolling(3).mean()
+    df['candle_direcao_10'] = df['candle_direcao'].rolling(10).mean()
+
+    return df
+
 
 
 def setup_1_old(df,var_bb = 2,time_period = 20,pontos = 20,rate_stop = 1,rate_tp = 2):
@@ -52,8 +83,8 @@ def setup_1_old(df,var_bb = 2,time_period = 20,pontos = 20,rate_stop = 1,rate_tp
 
     percent_fechamento = 0.9
 
-    df['acao'] = df.apply(lambda x: 'call' if (x['pos_BB_inicial'] == -1 and x['verifica_tamanho']) else
-                                    'sell' if (x['pos_BB_inicial'] == 1 and x['verifica_tamanho']) else 0 , axis = 1) 
+    df['acao'] = df.apply(lambda x: 'call' if (x['pos_BB_inicial'] == -1) else
+                                    'sell' if (x['pos_BB_inicial'] == 1) else 0 , axis = 1) 
 
 
     lista = df['acao'].values
@@ -367,8 +398,7 @@ def setup_1(df,df_ticks,var_bb = 2,time_period = 20,pontos = 20,rate_stop = 1,ra
                                             x['Close'] + rate_tp * pontos if x['acao'] == 'call' else 0, axis =1)
 
     
-    df_acao = df[(df['acao'] != 0) & ((df['verifica_tamanho'] <=1))][['Data','Open','Close','acao','stop','tp']]
-
+    df_acao = df[(df['acao'] != 0) & ((df['verifica_tamanho'] <=1))]
     timeframe = timeframe
 
     lista_result = []
