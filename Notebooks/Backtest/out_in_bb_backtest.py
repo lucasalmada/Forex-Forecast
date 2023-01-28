@@ -12,10 +12,17 @@ warnings.filterwarnings("ignore")
 def setup_stop_tp(df,timeperiod=20,var_bb=2,pontos = 100,rate_tp =2,EMA =True):
 
     df['BB_up'],df['BB_mid'],df['BB_low'] = ta.BBANDS(df['Close'], timeperiod=timeperiod, nbdevup=var_bb, nbdevdn=var_bb, matype=0)
-    df['EMA'] = ta.EMA(df['Close'],timeperiod=200)
-    #df['RSI'] = ta.RSI(df['Close'],14)
+    df['EMA'] = ta.EMA(df['Close'],timeperiod=250)
+    df['RSI'] = ta.RSI(df['Close'],timeperiod = 14)
+    df['MOM'] = ta.MOM(df['Close'],timeperiod = 14)
     df['macd'], df['macdsignal'], df['macdhist'] = ta.MACD(df['Close'], fastperiod=12, slowperiod=26, signalperiod=9)
-    df['tamanho_corpo'] = abs(df['Open'] - df['Close'])
+    df['direcao_candle_1'] = (df['Close'].shift(1) - df['Open'].shift(1)).apply(lambda x: 1 if x > 0 else 0)
+    df['direcao_candle_2'] = (df['Close'].shift(2) - df['Open'].shift(2)).apply(lambda x: 1 if x > 0 else 0)
+    df['direcao_candle_3'] = (df['Close'].shift(3) - df['Open'].shift(3)).apply(lambda x: 1 if x > 0 else 0)
+    df['direcao_candle_4'] = (df['Close'].shift(4) - df['Open'].shift(4)).apply(lambda x: 1 if x > 0 else 0)
+    df['direcao_candle_5'] = (df['Close'].shift(5) - df['Open'].shift(5)).apply(lambda x: 1 if x > 0 else 0)
+    df['direcao'] = df['direcao_candle_1'] + df['direcao_candle_2'] + df['direcao_candle_3'] + df['direcao_candle_4'] + + df['direcao_candle_5']
+    df['d_atual'] = (df['Close'] - df['Open'])
     '''df['tamanho_pra_baixo'] = abs(df['Open'] - df['Low'])
     df['tamanho_abaixo'] = abs(df['Close'] - df['Low'])
     df['tamanho_pra_cima'] = abs(df['Open'] - df['High'])
@@ -40,16 +47,16 @@ def setup_stop_tp(df,timeperiod=20,var_bb=2,pontos = 100,rate_tp =2,EMA =True):
                                     'sell' if (x['pos_BB_inicial'] == 1 and x['Close'] < x['EMA']) else 0 , axis = 1)'''
     
 
-    df['acao'] = df.apply(lambda x: 'call' if (x['pos_BB_inicial'] == -1 and x['Close'] > x['EMA']) else
+    '''df['acao'] = df.apply(lambda x: 'call' if (x['pos_BB_inicial'] == -1 and x['Close'] > x['EMA']) else
                                     'sell' if (x['pos_BB_inicial'] == 1 and x['Close'] < x['EMA']) else 0 , axis = 1)
-
+'''
     '''df['acao'] = df.apply(lambda x: 'call' if (x['pos_BB_inicial'] == -1 and x['macdhist'] > -50) else
                                     'sell' if (x['pos_BB_inicial'] == 1 and x['macdhist'] < 50) else 0 , axis = 1)'''
     if EMA:
         df['acao'] = df.apply(lambda x: 'call' if (x['pos_BB_inicial'] == -1 and x['Close'] > x['EMA']) else
                                     'sell' if (x['pos_BB_inicial'] == 1 and x['Close'] < x['EMA']) else 0 , axis = 1)
     else:
-        df['acao'] = df.apply(lambda x: 'call' if (x['pos_BB_inicial'] == -1) else
+        df['acao'] = df.apply(lambda x: 'call' if (x['pos_BB_inicial'] == -1 ) else
                                     'sell' if (x['pos_BB_inicial'] == 1) else 0 , axis = 1)
 
 
@@ -70,13 +77,15 @@ def setup_stop_tp(df,timeperiod=20,var_bb=2,pontos = 100,rate_tp =2,EMA =True):
     lista = df['acao'].values
     lista_candles = [0] * len(df)
     lista_bb = df['pos_BB_inicial'].values
-    tempo_lista =2
+    lista_2 = df['direcao'].values
+    lista_1 = df['d_atual'].values
+    tempo_lista =1
     for num, acao in enumerate(lista):
         #print(num,i)
         if acao == 'call':
             for i in range(tempo_lista):
                 try:
-                    if lista_bb[num+i+1] == 0:
+                    if lista_2[num+i+1] == 0:
                         lista_candles[num+i+1] = 'call'
                         break
                 except:
@@ -84,7 +93,7 @@ def setup_stop_tp(df,timeperiod=20,var_bb=2,pontos = 100,rate_tp =2,EMA =True):
         if acao == 'sell':
             for i in range(tempo_lista):
                 try:
-                    if lista_bb[num+i+1] == 0:
+                    if lista_2[num+i+1] == 5:
                         lista_candles[num+i+1] = 'sell'
                         break
                 except:
@@ -96,7 +105,7 @@ def setup_stop_tp(df,timeperiod=20,var_bb=2,pontos = 100,rate_tp =2,EMA =True):
 
 
 
-    df['Hora'] = df['Data'].apply(lambda x: x[11:])
+    '''    df['Hora'] = df['Data'].apply(lambda x: x[11:])
     df['Hora_h'] = df['Hora'].apply(lambda x: x[:2])
 
     lista_horas = df['Hora_h'].values
@@ -106,7 +115,7 @@ def setup_stop_tp(df,timeperiod=20,var_bb=2,pontos = 100,rate_tp =2,EMA =True):
         if value in ['18']:
             lista_signal[num] = 0
 
-    df['signal'] = lista_signal 
+    df['signal'] = lista_signal '''
 
     df['Data'] = pd.to_datetime(df['Data'])
     df = df.set_index('Data')
@@ -132,7 +141,155 @@ def setup_stop_tp(df,timeperiod=20,var_bb=2,pontos = 100,rate_tp =2,EMA =True):
                 tp1 = self.data.Close[-1] - tp
                 self.sell(sl=sl1, tp=tp1)
 
-    bt = Backtest(df, MyCandlesStrat, cash=100000000, commission=0)
+    bt = Backtest(df, MyCandlesStrat, cash=100000000, commission=0,hedging=True)
+    bt.run()
+    #bt.plot()
+    return bt
+
+def setup_estr_2(df,timeperiod=20,var_bb=2,pontos = 100,rate_tp =2,EMA =True):
+
+    df['BB_up'],df['BB_mid'],df['BB_low'] = ta.BBANDS(df['Close'], timeperiod=timeperiod, nbdevup=var_bb, nbdevdn=var_bb, matype=0)
+    df['EMA'] = ta.EMA(df['Close'],timeperiod=50)
+    df['CDLENGULFING'] = ta.CDLENGULFING(df['Open'],df['High'],df['Low'],df['Close'])
+    df['CDL3INSIDE'] = ta.CDL3INSIDE(df['Open'],df['High'],df['Low'],df['Close'])
+    df['CDLDOJI'] = ta.CDLDOJI(df['Open'],df['High'],df['Low'],df['Close'])
+    df['CDLEVENINGSTAR'] = ta.CDLEVENINGSTAR(df['Open'],df['High'],df['Low'],df['Close'])
+    df['CDLHAMMER'] = ta.CDLHAMMER(df['Open'],df['High'],df['Low'],df['Close'])
+    df['CDLMORNINGSTAR'] = ta.CDLMORNINGSTAR(df['Open'],df['High'],df['Low'],df['Close'])
+    df['CDLSHOOTINGSTAR'] = ta.CDLSHOOTINGSTAR(df['Open'],df['High'],df['Low'],df['Close'])
+    df['CDLSHOOTINGSTAR'] = ta.CDLSHOOTINGSTAR(df['Open'],df['High'],df['Low'],df['Close'])
+    df['CDLDARKCLOUDCOVER'] = ta.CDL3INSIDE(df['Open'],df['High'],df['Low'],df['Close'])    
+    #df['RSI'] = ta.RSI(df['Close'],timeperiod = 14)
+    #df['MOM'] = ta.MOM(df['Close'],timeperiod = 14)
+    #df['macd'], df['macdsignal'], df['macdhist'] = ta.MACD(df['Close'], fastperiod=12, slowperiod=26, signalperiod=9)
+    #df['tamanho_corpo'] = abs(df['Open'] - df['Close'])
+    '''df['tamanho_pra_baixo'] = abs(df['Open'] - df['Low'])
+    df['tamanho_abaixo'] = abs(df['Close'] - df['Low'])
+    df['tamanho_pra_cima'] = abs(df['Open'] - df['High'])
+    df['tamanho_acima'] = abs(df['High'] - df['Close'])
+    df['proximo_candle'] = df['Close'].shift(-1) - df['Open'].shift(-1)'''
+
+    df['pos_BB_inicial'] = df.apply(lambda x: 1 if x['Close'] > x['BB_up'] else -1 if x['Close'] < x['BB_low'] else 0, axis = 1)
+    #df['pos_BB_inicial'] = df['pos_BB_inicial'].diff()
+
+    #pos_BB = -2 cruzou pra BB_low pra baixo // pos_BB = 2 cruzou BB_high pra cima // 
+
+    
+    ''' df['verifica_tamanho'] = df.apply(lambda x: x['tamanho_corpo']/(x['tamanho_pra_baixo'] + 1e-4) if x['pos_BB_inicial'] == -1 else
+                                        x['tamanho_corpo']/(x['tamanho_pra_cima'] + 1e-4) if x['pos_BB_inicial'] == 1 else 0, axis = 1)
+'''
+
+
+    '''df['acao'] = df.apply(lambda x: 'call' if (x['pos_BB_inicial'] == -1) else
+                                    'sell' if (x['pos_BB_inicial'] == 1) else 0 , axis = 1)
+'''
+    '''df['acao'] = df.apply(lambda x: 'call' if (x['pos_BB_inicial'] == -1 and x['Close'] > x['EMA']) else
+                                    'sell' if (x['pos_BB_inicial'] == 1 and x['Close'] < x['EMA']) else 0 , axis = 1)'''
+    
+
+    '''df['acao'] = df.apply(lambda x: 'call' if (x['pos_BB_inicial'] == -1 and x['Close'] > x['EMA']) else
+                                    'sell' if (x['pos_BB_inicial'] == 1 and x['Close'] < x['EMA']) else 0 , axis = 1)
+'''
+    '''df['acao'] = df.apply(lambda x: 'call' if (x['pos_BB_inicial'] == -1 and x['macdhist'] > -50) else
+                                    'sell' if (x['pos_BB_inicial'] == 1 and x['macdhist'] < 50) else 0 , axis = 1)'''
+    if EMA:
+        df['acao'] = df.apply(lambda x: 'call' if (x['pos_BB_inicial'] == -1 and x['Close'] < x['EMA']) else
+                                    'sell' if (x['pos_BB_inicial'] == 1 and x['Close'] > x['EMA']) else 0 , axis = 1)
+    else:
+        df['acao'] = df.apply(lambda x: 'call' if (x['pos_BB_inicial'] == -1) else
+                                    'sell' if (x['pos_BB_inicial'] == 1) else 0 , axis = 1)
+
+
+    lista = df['acao'].values
+    tempo_lista =10
+    for num, i in enumerate(lista):
+        #print(num,i)
+        if i != 0:
+            for i in range(tempo_lista):
+                try:
+                    n_num = num + i + 1
+                    lista[n_num] = 0
+                except:
+                    pass
+
+    df['acao'] = lista 
+    
+    lista = df['acao'].values
+    lista_candles = [0] * len(df)
+    lista_bb1 = df['CDLENGULFING'].values
+    lista_bb2 = df['CDLENGULFING'].values
+    lista_bb3 = df['CDLDARKCLOUDCOVER'].values
+    lista_bb4 = df['CDLEVENINGSTAR'].values
+    lista_bb5 = df['CDLMORNINGSTAR'].values
+    lista_bb6 = df['CDL3INSIDE'].values
+    lista_bb7 = df['CDLSHOOTINGSTAR'].values
+    lista_bb8 = df['CDLHAMMER'].values
+
+    tempo_lista =3
+    for num, acao in enumerate(lista):
+        #print(num,i)
+        if acao == 'call':
+            for i in range(tempo_lista):
+                try:
+                    if lista_bb1[num+i+1] == 100  or lista_bb6[num+i+1] == 100:
+                    #if lista_bb8[num+i+1] == 100:
+                        lista_candles[num+i+1] = 'sell'
+                        break
+                except:
+                    pass
+        if acao == 'sell':
+            for i in range(tempo_lista):
+                try:
+                    if lista_bb2[num+i+1] == -100 or lista_bb3[num+i+1] == -100  or lista_bb6[num+i+1] == -100:
+                    #if lista_bb7[num+i+1] == -100:
+                        lista_candles[num+i+1] = 'call'
+                        break
+                except:
+                    pass
+            
+
+    df['signal'] = lista_candles 
+    df['signal'] = df['signal'].apply(lambda x: 1 if x == 'call' else 2 if x=='sell' else 0)
+
+
+
+    '''    df['Hora'] = df['Data'].apply(lambda x: x[11:])
+    df['Hora_h'] = df['Hora'].apply(lambda x: x[:2])
+
+    lista_horas = df['Hora_h'].values
+    lista_signal = df['signal'].values
+
+    for num,value in enumerate(lista_horas):
+        if value in ['18']:
+            lista_signal[num] = 0
+
+    df['signal'] = lista_signal '''
+
+    df['Data'] = pd.to_datetime(df['Data'])
+    df = df.set_index('Data')
+
+    def SIGNAL():
+        return df.signal
+
+    class MyCandlesStrat(Strategy):
+        def init(self):
+            super().init()
+            self.signal1 = self.I(SIGNAL)
+
+        def next(self):
+            super().next() 
+            sl = pontos
+            tp = pontos * rate_tp
+            if self.signal1==1:
+                sl1 = self.data.Close[-1] - sl
+                tp1 = self.data.Close[-1] + tp
+                self.buy(sl=sl1, tp=tp1)
+            elif self.signal1==2:
+                sl1 = self.data.Close[-1] + sl
+                tp1 = self.data.Close[-1] - tp
+                self.sell(sl=sl1, tp=tp1)
+
+    bt = Backtest(df, MyCandlesStrat, cash=100000000, commission=0,hedging=True)
     bt.run()
     #bt.plot()
     return bt
@@ -168,9 +325,9 @@ def setup_tsl(df,timeperiod=20,var_bb=2,pontos = 20,rate_stop = 1,rate_tp = 2,ti
                                     'sell' if (x['pos_BB_inicial'] == 1 and x['Close'] < x['EMA']) else 0 , axis = 1)'''
     
 
-    df['acao'] = df.apply(lambda x: 'call' if (x['pos_BB_inicial'] == -1 and x['Close'] > x['EMA']) else
+    '''df['acao'] = df.apply(lambda x: 'call' if (x['pos_BB_inicial'] == -1 and x['Close'] > x['EMA']) else
                                     'sell' if (x['pos_BB_inicial'] == 1 and x['Close'] < x['EMA']) else 0 , axis = 1)
-
+'''
     '''df['acao'] = df.apply(lambda x: 'call' if (x['pos_BB_inicial'] == -1 and x['macdhist'] > -50) else
                                     'sell' if (x['pos_BB_inicial'] == 1 and x['macdhist'] < 50) else 0 , axis = 1)'''
     
@@ -242,7 +399,7 @@ def setup_tsl(df,timeperiod=20,var_bb=2,pontos = 20,rate_stop = 1,rate_tp = 2,ti
         return df.signal
 
     class MyCandlesStrat(Strategy):
-        sltr = 0.0010
+        sltr = 250
         def init(self):
             super().init()
             self.signal1 = self.I(SIGNAL)
@@ -263,7 +420,7 @@ def setup_tsl(df,timeperiod=20,var_bb=2,pontos = 20,rate_stop = 1,rate_tp = 2,ti
                 sl1 = self.data.Close[-1] + sltr
                 self.sell(sl=sl1)
 
-    bt = Backtest(df, MyCandlesStrat, cash=100000000, commission=0)
+    bt = Backtest(df, MyCandlesStrat, cash=100000000, commission=0,hedging=True)
     bt.run()
     #bt.plot()
     return bt
